@@ -9,15 +9,14 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 import tetour.com.models.dto.request.auth.AuthenticationRequest;
 import tetour.com.models.dto.request.user.UserCreateRequest;
 import tetour.com.models.dto.response.auth.APIResponse;
 import tetour.com.service.AuthService;
 import tetour.com.service.UserService;
+
+import java.text.ParseException;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -57,5 +56,28 @@ public class AuthController {
                 .data(userService.saveUser(userCreateRequest))
                 .statusCode(200)
                 .build());
+    }
+    @PostMapping("/refresh")
+    public ResponseEntity<APIResponse> refreshToken(@CookieValue("refreshToken") String token) throws ParseException {
+        /**
+         * Refreshes an access token using a provided refresh token.
+         * @param token The refresh token provided as a cookie.
+         * @return A ResponseEntity containing an APIResponse with the new access token.
+         * @throws ParseException If there is an error parsing the token.
+         */
+        log.info("Refresh token {}", token);
+        var response = authService.refreshToken(token);
+        log.info("New access token {}", response.getAccessToken());
+        ResponseCookie cookie = ResponseCookie.from("refreshToken", response.getRefreshToken())
+                .httpOnly(true)
+                .secure(ENABLE_SECURE)
+                .path("/")
+                .maxAge(response.getRefreshTokenDuration())
+                .sameSite("Lax")
+                .build();
+
+        return ResponseEntity.ok()
+                .header(HttpHeaders.SET_COOKIE, cookie.toString())
+                .body(APIResponse.builder().message("Refresh token successfully").data(response).statusCode(200).build());
     }
 }
