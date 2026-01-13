@@ -89,7 +89,7 @@ export default function Footer() {
                 </Link>
               </li>
               <li>
-                <Link href='/cookies' className='text-gray-400 hover:text-white'>
+                <Link href='/cookie-policy' className='text-gray-400 hover:text-white'>
                   Cookie Policy
                 </Link>
               </li>
