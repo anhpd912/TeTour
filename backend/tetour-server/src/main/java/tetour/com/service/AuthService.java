@@ -6,6 +6,7 @@ import tetour.com.models.dto.request.auth.IntrospectRequest;
 import tetour.com.models.dto.request.auth.LogoutRequest;
 import tetour.com.models.dto.response.auth.AuthenticationResponse;
 import tetour.com.models.dto.response.auth.IntrospectResponse;
+import tetour.com.models.dto.response.auth.RefreshTokenResponse;
 
 import java.text.ParseException;
 
@@ -13,7 +14,7 @@ public interface AuthService {
     AuthenticationResponse authenticate(AuthenticationRequest request);
     IntrospectResponse introspect(IntrospectRequest request);
     void logout(LogoutRequest token);
-    AuthenticationResponse refreshToken(String request) throws ParseException;
+    RefreshTokenResponse refreshToken(String request) throws ParseException;
 
 
     Boolean resetPassword(String email) throws MessagingException;
