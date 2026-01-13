@@ -11,7 +11,7 @@ import tetour.com.models.entity.User;
 
 @Generated(
     value = "org.mapstruct.ap.MappingProcessor",
-    date = "2026-01-13T08:48:33+0700",
+    date = "2026-01-13T13:54:00+0700",
     comments = "version: 1.5.5.Final, compiler: javac, environment: Java 21.0.7 (Oracle Corporation)"
 )
 @Component
