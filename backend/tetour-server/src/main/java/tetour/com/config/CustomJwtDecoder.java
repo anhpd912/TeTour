@@ -2,6 +2,7 @@ package tetour.com.config;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.security.oauth2.jose.jws.MacAlgorithm;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
@@ -15,13 +16,15 @@ import javax.crypto.spec.SecretKeySpec;
 import java.util.Objects;
 
 @Component
-
 public class CustomJwtDecoder implements JwtDecoder {
 
     @Value("${jwt.secret}")
     String secretKey;
+    
     @Autowired
+    @Lazy
     AuthService authService;
+    
     NimbusJwtDecoder nimbusJwtDecoder = null;
 
     @Override
