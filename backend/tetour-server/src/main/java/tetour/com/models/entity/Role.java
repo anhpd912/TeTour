@@ -1,6 +1,8 @@
 package tetour.com.models.entity;
 
-import jakarta.persistence.*;
+import jakarta.persistence.Entity;
+import jakarta.persistence.Id;
+import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -8,8 +10,6 @@ import lombok.NoArgsConstructor;
 import org.jspecify.annotations.Nullable;
 import org.springframework.security.core.GrantedAuthority;
 import tetour.com.enums.RoleName;
-
-import java.util.UUID;
 
 @Entity
 @Table(name = "roles")
@@ -19,8 +19,6 @@ import java.util.UUID;
 @AllArgsConstructor
 public class Role implements GrantedAuthority {
     @Id
-    UUID id;
-    @Enumerated(EnumType.STRING)
     RoleName name;
     String description;
 

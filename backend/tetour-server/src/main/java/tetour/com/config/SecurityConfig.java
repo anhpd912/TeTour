@@ -69,8 +69,4 @@ public class SecurityConfig {
         return jwtAuthenticationConverter;
     }
 
-    @Bean
-    public PasswordEncoder bCryptPasswordEncoder() {
-        return new BCryptPasswordEncoder(10);
-    }
 }
