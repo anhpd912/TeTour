@@ -22,4 +22,5 @@ public class RefreshToken {
     @NonNull
     @Column(name = "expiry_date")
     Date expiryDate;
+    Boolean rememberMe;
 }

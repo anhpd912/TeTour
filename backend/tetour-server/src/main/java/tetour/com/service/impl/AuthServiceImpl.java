@@ -10,9 +10,11 @@ import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
 import lombok.experimental.NonFinal;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import tetour.com.enums.ErrorCode;
 import tetour.com.exception.AppException;
 import tetour.com.mapper.UserMapper;
@@ -21,6 +23,7 @@ import tetour.com.models.dto.request.auth.IntrospectRequest;
 import tetour.com.models.dto.request.auth.LogoutRequest;
 import tetour.com.models.dto.response.auth.AuthenticationResponse;
 import tetour.com.models.dto.response.auth.IntrospectResponse;
+import tetour.com.models.dto.response.auth.RefreshTokenResponse;
 import tetour.com.models.entity.RefreshToken;
 import tetour.com.models.entity.User;
 import tetour.com.repository.RefreshTokenRepository;
@@ -34,6 +37,7 @@ import java.util.Date;
 import java.util.StringJoiner;
 import java.util.UUID;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
@@ -54,6 +58,7 @@ public class AuthServiceImpl implements AuthService {
     PasswordEncoder passwordEncoder;
     UserRepository userRepository;
     UserMapper userMapper;
+
     @Override
     public AuthenticationResponse authenticate(AuthenticationRequest request) {
         User user = userRepository.findByUsername(request.getUsername())
@@ -86,9 +91,31 @@ public class AuthServiceImpl implements AuthService {
 
     }
 
+    @Transactional
     @Override
-    public AuthenticationResponse refreshToken(String request) throws ParseException {
-        return null;
+    public RefreshTokenResponse refreshToken(String token) throws ParseException {
+        log.info("Refresh token {}", token);
+        var oldRefreshToken = refreshTokenRepository.findById(token).orElseThrow(() -> {
+            throw new AppException(ErrorCode.INVALID_REFRESH_TOKEN);
+        });
+        refreshTokenRepository.deleteByToken(token);
+        // Retrieve user from the user id in old refresh token
+        UUID userId = oldRefreshToken.getUserId();
+        String refreshToken = UUID.randomUUID().toString();
+        refreshTokenRepository.save(RefreshToken.builder()
+                .token(refreshToken)
+                .userId(userId)
+                .expiryDate(new Date(System.currentTimeMillis() + (oldRefreshToken.getRememberMe() ? REFRESH_EXPIRATION_TIME_REMEMBER_ME : REFRESH_EXPIRATION_TIME)))
+                .rememberMe(oldRefreshToken.getRememberMe())
+                .build()
+        );
+        User user = userRepository.findById(oldRefreshToken.getUserId()).orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
+        return RefreshTokenResponse.builder()
+                .accessToken(generateToken(user))
+                .refreshToken(refreshToken)
+                .refreshTokenDuration(REFRESH_EXPIRATION_TIME_REMEMBER_ME)
+                .build();
+
     }
 
     @Override
@@ -165,6 +192,7 @@ public class AuthServiceImpl implements AuthService {
                 .token(refreshToken)
                 .userId(user.getId())
                 .expiryDate(expiryDate)
+                .rememberMe(rememberMe)
                 .build()
         );
         return refreshToken;
