@@ -6,4 +6,5 @@ import tetour.com.models.entity.RefreshToken;
 
 @Repository
 public interface RefreshTokenRepository extends JpaRepository<RefreshToken, String> {
+    void deleteByToken(String token);
 }
