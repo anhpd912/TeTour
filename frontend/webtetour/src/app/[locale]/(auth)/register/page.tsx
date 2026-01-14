@@ -2,22 +2,137 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import Header from 'src/shared/components/Header';
 import Footer from 'src/shared/components/Footer';
+import ApiTestButton from 'src/shared/components/ApiTestButton';
+import { useRegisterMutation } from 'src/shared/services/api/mutations/useRegister.mutation';
+import type { RegisterRequest } from 'src/shared/types/auth.types';
 
 export default function RegisterPage() {
+  const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({
-    fullName: '',
-    phoneNumber: '',
+    username: '',
     email: '',
+    phoneNumber: '',
+    firstName: '',
+    lastName: '',
+    address: '',
+    dateOfBirth: '',
+    gender: true, // true = male, false = female
     password: '',
     agreeToTerms: false,
+    isActive: true,
+  });
+  const [errors, setErrors] = useState<Record<string, string>>({});
+
+  const registerMutation = useRegisterMutation({
+    onSuccess: (data) => {
+      console.log('Registration successful:', data);
+      // Show success message
+      alert('Registration successful! Please login.');
+      // Redirect to login page
+      router.push('/login');
+    },
+    onError: (error) => {
+      console.error('Registration failed:', error);
+      console.error('Error details:', {
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        data: error.response?.data,
+        message: error.message,
+      });
+
+      // Handle validation errors
+      if (error.response?.data?.errors) {
+        const apiErrors: Record<string, string> = {};
+        Object.entries(error.response.data.errors).forEach(([key, messages]) => {
+          if (Array.isArray(messages) && messages.length > 0) {
+            apiErrors[key] = String(messages[0]);
+          }
+        });
+        console.log('Validation errors:', apiErrors);
+        setErrors(apiErrors);
+      } else {
+        // Show general error message
+        alert(error.response?.data?.message || 'Registration failed. Please try again.');
+      }
+    },
   });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    console.log('Form submitted:', formData);
+
+    // Clear previous errors
+    setErrors({});
+
+    // Validate form
+    const newErrors: Record<string, string> = {};
+
+    if (!formData.username.trim()) {
+      newErrors.username = 'Username is required';
+    }
+
+    if (!formData.email.trim()) {
+      newErrors.email = 'Email is required';
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+      newErrors.email = 'Invalid email format';
+    }
+
+    if (!formData.firstName.trim()) {
+      newErrors.firstName = 'First name is required';
+    }
+
+    if (!formData.lastName.trim()) {
+      newErrors.lastName = 'Last name is required';
+    }
+
+    if (!formData.password) {
+      newErrors.password = 'Password is required';
+    } else if (formData.password.length < 8) {
+      newErrors.password = 'Password must be at least 8 characters';
+    }
+
+    if (!formData.phoneNumber.trim()) {
+      newErrors.phoneNumber = 'Phone number is required';
+    }
+
+    if (!formData.address.trim()) {
+      newErrors.address = 'Address is required';
+    }
+
+    if (!formData.dateOfBirth) {
+      newErrors.dateOfBirth = 'Date of birth is required';
+    }
+
+    if (!formData.agreeToTerms) {
+      newErrors.agreeToTerms = 'You must agree to the terms';
+    }
+
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      return;
+    }
+
+    // Prepare data for API
+    const registerData: RegisterRequest = {
+      username: formData.username.trim(),
+      password: formData.password,
+      email: formData.email.trim(),
+      firstName: formData.firstName.trim(),
+      lastName: formData.lastName.trim(),
+      phoneNumber: formData.phoneNumber.trim(),
+      address: formData.address.trim(),
+      dateOfBirth: formData.dateOfBirth,
+      gender: formData.gender,
+      isActive: formData.isActive,
+    };
+
+    console.log('Sending register request:', { ...registerData, password: '***' });
+
+    // Call API
+    registerMutation.mutate(registerData);
   };
 
   const handleGoogleSignup = () => {
@@ -41,49 +156,112 @@ export default function RegisterPage() {
 
               {/* Form */}
               <form onSubmit={handleSubmit} className='space-y-6'>
-                <div className='grid grid-cols-1 gap-4 md:grid-cols-2'>
-                  <div>
-                    <label className='mb-2 block text-sm font-medium text-gray-700'>Full Name</label>
-                    <input
-                      type='text'
-                      placeholder='Nguyen Van A'
-                      value={formData.fullName}
-                      onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
-                      className='w-full rounded-lg border border-gray-200 px-4 py-3 focus:ring-2 focus:ring-cyan-400 focus:outline-none'
-                    />
-                  </div>
-                  <div>
-                    <label className='mb-2 block text-sm font-medium text-gray-700'>Phone Number</label>
-                    <input
-                      type='tel'
-                      placeholder='+84 000 000 000'
-                      value={formData.phoneNumber}
-                      onChange={(e) => setFormData({ ...formData, phoneNumber: e.target.value })}
-                      className='w-full rounded-lg border border-gray-200 px-4 py-3 focus:ring-2 focus:ring-cyan-400 focus:outline-none'
-                    />
-                  </div>
+                <div>
+                  <label className='mb-2 block text-sm font-medium text-gray-700'>Username *</label>
+                  <input
+                    type='text'
+                    placeholder='username'
+                    value={formData.username}
+                    onChange={(e) => setFormData({ ...formData, username: e.target.value })}
+                    className={`w-full rounded-lg border ${errors.username ? 'border-red-500' : 'border-gray-200'} px-4 py-3 focus:ring-2 focus:ring-cyan-400 focus:outline-none`}
+                  />
+                  {errors.username && <p className='mt-1 text-sm text-red-500'>{errors.username}</p>}
                 </div>
 
                 <div>
-                  <label className='mb-2 block text-sm font-medium text-gray-700'>Email Address</label>
+                  <label className='mb-2 block text-sm font-medium text-gray-700'>Email *</label>
                   <input
                     type='email'
-                    placeholder='traveler@example.com'
+                    placeholder='email@example.com'
                     value={formData.email}
                     onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                    className='w-full rounded-lg border border-gray-200 px-4 py-3 focus:ring-2 focus:ring-cyan-400 focus:outline-none'
+                    className={`w-full rounded-lg border ${errors.email ? 'border-red-500' : 'border-gray-200'} px-4 py-3 focus:ring-2 focus:ring-cyan-400 focus:outline-none`}
                   />
+                  {errors.email && <p className='mt-1 text-sm text-red-500'>{errors.email}</p>}
+                </div>
+
+                <div className='grid grid-cols-1 gap-4 md:grid-cols-2'>
+                  <div>
+                    <label className='mb-2 block text-sm font-medium text-gray-700'>First Name *</label>
+                    <input
+                      type='text'
+                      placeholder='Nguyen'
+                      value={formData.firstName}
+                      onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
+                      className={`w-full rounded-lg border ${errors.firstName ? 'border-red-500' : 'border-gray-200'} px-4 py-3 focus:ring-2 focus:ring-cyan-400 focus:outline-none`}
+                    />
+                    {errors.firstName && <p className='mt-1 text-sm text-red-500'>{errors.firstName}</p>}
+                  </div>
+                  <div>
+                    <label className='mb-2 block text-sm font-medium text-gray-700'>Last Name *</label>
+                    <input
+                      type='text'
+                      placeholder='Van A'
+                      value={formData.lastName}
+                      onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
+                      className={`w-full rounded-lg border ${errors.lastName ? 'border-red-500' : 'border-gray-200'} px-4 py-3 focus:ring-2 focus:ring-cyan-400 focus:outline-none`}
+                    />
+                    {errors.lastName && <p className='mt-1 text-sm text-red-500'>{errors.lastName}</p>}
+                  </div>
                 </div>
 
                 <div>
-                  <label className='mb-2 block text-sm font-medium text-gray-700'>Password</label>
+                  <label className='mb-2 block text-sm font-medium text-gray-700'>Phone Number</label>
+                  <input
+                    type='tel'
+                    placeholder='+84 123 456 789'
+                    value={formData.phoneNumber}
+                    onChange={(e) => setFormData({ ...formData, phoneNumber: e.target.value })}
+                    className='w-full rounded-lg border border-gray-200 px-4 py-3 focus:ring-2 focus:ring-cyan-400 focus:outline-none'
+                  />
+                  {errors.phoneNumber && <p className='mt-1 text-sm text-red-500'>{errors.phoneNumber}</p>}
+                </div>
+
+                <div>
+                  <label className='mb-2 block text-sm font-medium text-gray-700'>Address</label>
+                  <input
+                    type='text'
+                    placeholder='123 Street, District, City'
+                    value={formData.address}
+                    onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                    className='w-full rounded-lg border border-gray-200 px-4 py-3 focus:ring-2 focus:ring-cyan-400 focus:outline-none'
+                  />
+                  {errors.address && <p className='mt-1 text-sm text-red-500'>{errors.address}</p>}
+                </div>
+
+                <div className='grid grid-cols-1 gap-4 md:grid-cols-2'>
+                  <div>
+                    <label className='mb-2 block text-sm font-medium text-gray-700'>Date of Birth</label>
+                    <input
+                      type='date'
+                      value={formData.dateOfBirth}
+                      onChange={(e) => setFormData({ ...formData, dateOfBirth: e.target.value })}
+                      className='w-full rounded-lg border border-gray-200 px-4 py-3 focus:ring-2 focus:ring-cyan-400 focus:outline-none'
+                    />
+                    {errors.dateOfBirth && <p className='mt-1 text-sm text-red-500'>{errors.dateOfBirth}</p>}
+                  </div>
+
+                  <div>
+                    <label className='mb-2 block text-sm font-medium text-gray-700'>Gender</label>
+                    <select
+                      value={formData.gender ? 'male' : 'female'}
+                      onChange={(e) => setFormData({ ...formData, gender: e.target.value === 'male' })}
+                      className='w-full rounded-lg border border-gray-200 px-4 py-3 focus:ring-2 focus:ring-cyan-400 focus:outline-none'>
+                      <option value='male'>Male</option>
+                      <option value='female'>Female</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div>
+                  <label className='mb-2 block text-sm font-medium text-gray-700'>Password *</label>
                   <div className='relative'>
                     <input
                       type={showPassword ? 'text' : 'password'}
                       placeholder='Min. 8 characters'
                       value={formData.password}
                       onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                      className='w-full rounded-lg border border-gray-200 px-4 py-3 focus:ring-2 focus:ring-cyan-400 focus:outline-none'
+                      className={`w-full rounded-lg border ${errors.password ? 'border-red-500' : 'border-gray-200'} px-4 py-3 focus:ring-2 focus:ring-cyan-400 focus:outline-none`}
                     />
                     <button
                       type='button'
@@ -116,35 +294,61 @@ export default function RegisterPage() {
                       )}
                     </button>
                   </div>
+                  {errors.password && <p className='mt-1 text-sm text-red-500'>{errors.password}</p>}
                 </div>
 
-                <div className='flex items-start gap-2'>
-                  <input
-                    type='checkbox'
-                    id='terms'
-                    checked={formData.agreeToTerms}
-                    onChange={(e) => setFormData({ ...formData, agreeToTerms: e.target.checked })}
-                    className='mt-1 h-4 w-4 rounded border-gray-300 text-cyan-400 focus:ring-cyan-400'
-                  />
-                  <label htmlFor='terms' className='text-sm text-gray-600'>
-                    I agree to the{' '}
-                    <Link href='/terms' className='text-cyan-400 hover:underline'>
-                      Terms of Service
-                    </Link>{' '}
-                    and{' '}
-                    <Link href='/privacy' className='text-cyan-400 hover:underline'>
-                      Privacy Policy
-                    </Link>
-                  </label>
+                <div>
+                  <div className='flex items-start gap-2'>
+                    <input
+                      type='checkbox'
+                      id='terms'
+                      checked={formData.agreeToTerms}
+                      onChange={(e) => setFormData({ ...formData, agreeToTerms: e.target.checked })}
+                      className='mt-1 h-4 w-4 rounded border-gray-300 text-cyan-400 focus:ring-cyan-400'
+                    />
+                    <label htmlFor='terms' className='text-sm text-gray-600'>
+                      I agree to the{' '}
+                      <Link href='/terms' className='text-cyan-400 hover:underline'>
+                        Terms of Service
+                      </Link>{' '}
+                      and{' '}
+                      <Link href='/privacy' className='text-cyan-400 hover:underline'>
+                        Privacy Policy
+                      </Link>
+                    </label>
+                  </div>
+                  {errors.agreeToTerms && <p className='mt-1 text-sm text-red-500'>{errors.agreeToTerms}</p>}
                 </div>
 
                 <button
                   type='submit'
-                  className='flex w-full items-center justify-center gap-2 rounded-full bg-cyan-400 py-3 font-medium text-white transition-colors hover:bg-cyan-500'>
-                  Create Account
-                  <svg className='h-5 w-5' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
-                    <path strokeLinecap='round' strokeLinejoin='round' strokeWidth={2} d='M13 7l5 5m0 0l-5 5m5-5H6' />
-                  </svg>
+                  disabled={registerMutation.isPending}
+                  className='flex w-full items-center justify-center gap-2 rounded-full bg-cyan-400 py-3 font-medium text-white transition-colors hover:bg-cyan-500 disabled:cursor-not-allowed disabled:opacity-50'>
+                  {registerMutation.isPending ? (
+                    <>
+                      <svg className='h-5 w-5 animate-spin' fill='none' viewBox='0 0 24 24'>
+                        <circle className='opacity-25' cx='12' cy='12' r='10' stroke='currentColor' strokeWidth='4' />
+                        <path
+                          className='opacity-75'
+                          fill='currentColor'
+                          d='M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z'
+                        />
+                      </svg>
+                      Creating Account...
+                    </>
+                  ) : (
+                    <>
+                      Create Account
+                      <svg className='h-5 w-5' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
+                        <path
+                          strokeLinecap='round'
+                          strokeLinejoin='round'
+                          strokeWidth={2}
+                          d='M13 7l5 5m0 0l-5 5m5-5H6'
+                        />
+                      </svg>
+                    </>
+                  )}
                 </button>
 
                 {/* Divider */}
@@ -286,6 +490,10 @@ export default function RegisterPage() {
           </div>
         </div>
       </div>
+
+      {/* API Test Button - Only in development */}
+      {process.env.NODE_ENV === 'development' && <ApiTestButton />}
+
       <Footer />
     </div>
   );
