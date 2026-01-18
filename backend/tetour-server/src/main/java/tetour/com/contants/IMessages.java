@@ -54,4 +54,7 @@ public interface IMessages {
     String CLASS_STUDENT_NOT_FOUND = "Class student not found";
     String CLASS_STUDENT_ALREADY_EXISTS = "Student already enrolled in this class";
     String STUDENT_NOT_FOUND = "Student not found";
+
+    String OLDPASSWORD_NOT_MATCH = "Old password not match";
+    String CONFIRM_PASSWORD_NOT_MATCH = "Confirm password not match";
 }
