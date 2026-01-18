@@ -19,9 +19,11 @@ import tetour.com.enums.ErrorCode;
 import tetour.com.exception.AppException;
 import tetour.com.mapper.UserMapper;
 import tetour.com.models.dto.request.auth.AuthenticationRequest;
+import tetour.com.models.dto.request.auth.ChangePasswordRequest;
 import tetour.com.models.dto.request.auth.IntrospectRequest;
 import tetour.com.models.dto.request.auth.LogoutRequest;
 import tetour.com.models.dto.response.auth.AuthenticationResponse;
+import tetour.com.models.dto.response.auth.ChangePasswordResponse;
 import tetour.com.models.dto.response.auth.IntrospectResponse;
 import tetour.com.models.dto.response.auth.RefreshTokenResponse;
 import tetour.com.models.entity.RefreshToken;
@@ -83,7 +85,16 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     public IntrospectResponse introspect(IntrospectRequest request) {
-        return null;
+        Boolean valid = true;
+        String token = request.getToken();
+        try {
+            var signedJWT = verifyToken(token);
+        } catch (AppException e) {
+            valid = false;
+        }
+        return IntrospectResponse.builder()
+                .valid(valid)
+                .build();
     }
 
     @Override
@@ -125,8 +136,17 @@ public class AuthServiceImpl implements AuthService {
     }
 
     @Override
-    public Boolean updatePassword(String token, String newPassword) {
-        return null;
+    public ChangePasswordResponse updatePassword(ChangePasswordRequest request, UUID userId) {
+        var user = userRepository.findById(userId).orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
+        boolean checkOldPassword = passwordEncoder.matches(request.getOldPassword(), userRepository.findById(userId).get().getPassword());
+        if (!checkOldPassword) throw new AppException(ErrorCode.OLD_PASSWORD_NOT_MATCH);
+        if (!request.getNewPassword().equals(request.getConfirmPassword()))
+            throw new AppException(ErrorCode.CONFIRM_PASSWORD_NOT_MATCH);
+        user.setPassword(passwordEncoder.encode(request.getNewPassword()));
+        userRepository.save(user);
+        return ChangePasswordResponse.builder()
+                .username(user.getUsername())
+                .success(true).build();
     }
 
     public SignedJWT verifyToken(String token) {

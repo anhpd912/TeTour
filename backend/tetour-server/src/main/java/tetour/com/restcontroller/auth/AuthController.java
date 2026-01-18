@@ -9,14 +9,17 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PostAuthorize;
 import org.springframework.web.bind.annotation.*;
 import tetour.com.models.dto.request.auth.AuthenticationRequest;
+import tetour.com.models.dto.request.auth.ChangePasswordRequest;
 import tetour.com.models.dto.request.user.UserCreateRequest;
 import tetour.com.models.dto.response.auth.APIResponse;
 import tetour.com.service.AuthService;
 import tetour.com.service.UserService;
 
 import java.text.ParseException;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -29,6 +32,7 @@ public class AuthController {
     @NonFinal
     @Value("${enable.secure}")
     Boolean ENABLE_SECURE;
+
     @PostMapping("/login")
     public ResponseEntity<APIResponse> login(@RequestBody AuthenticationRequest request) {
 
@@ -57,6 +61,7 @@ public class AuthController {
                 .statusCode(200)
                 .build());
     }
+
     @PostMapping("/refresh")
     public ResponseEntity<APIResponse> refreshToken(@CookieValue("refreshToken") String token) throws ParseException {
         /**
@@ -79,5 +84,12 @@ public class AuthController {
         return ResponseEntity.ok()
                 .header(HttpHeaders.SET_COOKIE, cookie.toString())
                 .body(APIResponse.builder().message("Refresh token successfully").data(response).statusCode(200).build());
+    }
+
+    @PutMapping("/update-password/{userId}")
+    //Check current user is changing their password
+    @PostAuthorize("returnObject.body.data.username == authentication.name")
+    public ResponseEntity<APIResponse> updatePassword(@PathVariable UUID userId, @RequestBody ChangePasswordRequest request) {
+        return ResponseEntity.ok(APIResponse.builder().message("Update password successfully").data(authService.updatePassword(request, userId)).statusCode(200).build());
     }
 }
